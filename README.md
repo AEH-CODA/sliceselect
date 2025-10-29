@@ -27,10 +27,7 @@ python app.py
 Open http://127.0.0.1:5000 in your browser.
 
 Notes and behavior
-- Uploaded DICOMs are saved to `uploads/` temporarily.
-- Extracted PNGs are saved under `static/slices/<dicomname_timestamp>_slices/` so they can be displayed.
-- When you click "Download Slices", the server builds an in-memory zip, returns it to the client, and deletes the generated PNG folder.
-- The app attempts to cleanup uploaded DICOM files older than one hour on download.
+- All files (uploaded DICOMs and extracted PNGs) are stored in a temporary directory that is automatically cleaned up.
+- When you click "Download Slices", the server builds an in-memory zip and returns it to the client.
+- Files older than one hour are automatically cleaned up.
 - Input validation and basic error handling are included (invalid files, invalid integer input).
-
-Adjust secret key in `app.py` before deploying publicly.

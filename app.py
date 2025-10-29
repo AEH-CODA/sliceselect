@@ -101,94 +101,26 @@ def index():
 
 @app.route('/process', methods=['POST'])
 def process():
-    # Two-step flow: upload file -> ask n. then same route with n provided to extract
-    # If uploading file
-    if 'dicom_file' in request.files and request.files['dicom_file'].filename != '':
-        f = request.files['dicom_file']
-        if not allowed_file(f.filename):
-            flash('Please upload a file with .dcm extension')
-            return redirect(url_for('index'))
-        filename = os.path.basename(f.filename)
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        save_name = f"{os.path.splitext(filename)[0]}_{timestamp}.dcm"
-        save_path = os.path.join(UPLOAD_FOLDER, save_name)
-        f.save(save_path)
-        # show form to select n
-        return render_template('result.html', stage='choose_n', uploaded_filename=save_name)
-
-    # If user submitted the nth value or requested to show all slices
-    uploaded = request.form.get('uploaded_filename')
-    n_value = request.form.get('n')
-    action = request.form.get('action')
-    if not uploaded:
-        flash('No uploaded file found. Please upload a DICOM file first.')
+    if 'dicom_file' not in request.files or request.files['dicom_file'].filename == '':
+        flash('No file uploaded')
         return redirect(url_for('index'))
-    upload_path = os.path.join(UPLOAD_FOLDER, uploaded)
-    if not os.path.exists(upload_path):
-        flash('Uploaded file not found on server. Try uploading again.')
+        
+    f = request.files['dicom_file']
+    if not allowed_file(f.filename):
+        flash('Please upload a file with .dcm extension')
         return redirect(url_for('index'))
 
-    # validate n
-    # If user clicked "Show all slices", we will generate all frames and show them
-    if action == 'show_all':
-        try:
-            arr = read_dicom_pixel_array(upload_path)
-        except pydicom.errors.InvalidDicomError:
-            flash('Uploaded file is not a valid DICOM file.')
-            try:
-                os.remove(upload_path)
-            except Exception:
-                pass
-            return redirect(url_for('index'))
-        except Exception as e:
-            flash(f'Failed to read DICOM: {e}')
-            return redirect(url_for('index'))
+    # Save uploaded file
+    filename = os.path.basename(f.filename)
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    save_name = f"{os.path.splitext(filename)[0]}_{timestamp}.dcm"
+    upload_path = os.path.join(UPLOAD_FOLDER, save_name)
+    f.save(upload_path)
 
-        # prepare output folder
-        base = os.path.splitext(uploaded)[0]
-        folder_name = f"{base}_slices"
-        out_dir = os.path.join(OUTPUT_ROOT, folder_name)
-        if os.path.exists(out_dir):
-            shutil.rmtree(out_dir)
-        os.makedirs(out_dir, exist_ok=True)
-
-        # Save all frames
-        if arr.ndim == 2:
-            frames = [arr]
-            indices = [0]
-        else:
-            frames = [arr[i] for i in range(arr.shape[0])]
-            indices = list(range(len(frames)))
-
-        saved_files = []
-        for idx, a in zip(indices, frames):
-            img_arr = normalize_to_uint8(a)
-            im = Image.fromarray(img_arr)
-            if im.mode != 'RGB':
-                im = im.convert('L').convert('RGB')
-            fname = f"slice_{idx+1:04d}.png"
-            im.save(os.path.join(out_dir, fname))
-            saved_files.append(fname)
-
-        # Create URLs using the serve_image route instead of static files
-        thumbnails = [url_for('serve_image', folder=folder_name, filename=fn) for fn in saved_files]
-        return render_template('result.html', stage='show_results', folder_name=folder_name, thumbnails=thumbnails, filenames=saved_files)
-
-    # Otherwise validate n
-    try:
-        n = int(n_value)
-        if n <= 0:
-            raise ValueError()
-    except Exception:
-        flash('Please provide a valid positive integer for nth slice')
-        return render_template('result.html', stage='choose_n', uploaded_filename=uploaded)
-
-    # Load DICOM
     try:
         arr = read_dicom_pixel_array(upload_path)
     except pydicom.errors.InvalidDicomError:
         flash('Uploaded file is not a valid DICOM file.')
-        # cleanup uploaded file
         try:
             os.remove(upload_path)
         except Exception:
@@ -198,37 +130,24 @@ def process():
         flash(f'Failed to read DICOM: {e}')
         return redirect(url_for('index'))
 
-    # Determine frames
-    if arr.ndim == 2:
-        total = 1
-    else:
-        total = arr.shape[0]
-
-    # select every nth slice starting from first
-    indices = list(range(0, total, n))
-    if len(indices) == 0:
-        flash('No slices selected with this frequency. Try a smaller n.')
-        return render_template('result.html', stage='choose_n', uploaded_filename=uploaded)
-
-    # Prepare output folder name
-    base = os.path.splitext(uploaded)[0]
+    # Prepare output folder
+    base = os.path.splitext(save_name)[0]
     folder_name = f"{base}_slices"
     out_dir = os.path.join(OUTPUT_ROOT, folder_name)
-    # If exists from previous run, clear it
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
-    # If multi-frame, pick every nth frame and save
-    to_save = []
+    # Save all frames
     if arr.ndim == 2:
-        selected = [arr]
+        frames = [arr]
+        indices = [0]
     else:
-        selected = [arr[i] for i in indices]
+        frames = [arr[i] for i in range(arr.shape[0])]
+        indices = list(range(len(frames)))
 
     saved_files = []
-    for idx, a in zip(indices, selected):
-        # normalize and save each as PNG
+    for idx, a in zip(indices, frames):
         img_arr = normalize_to_uint8(a)
         im = Image.fromarray(img_arr)
         if im.mode != 'RGB':
@@ -237,14 +156,10 @@ def process():
         im.save(os.path.join(out_dir, fname))
         saved_files.append(fname)
 
-    # Keep a reference to cleanup later by returning folder key
-    # Show thumbnails
-    thumbnails = []
-    for fn in saved_files:
-        # Create route-based URLs that will serve from temp directory
-        thumbnails.append(url_for('serve_image', folder=folder_name, filename=fn))
+    # Create URLs using the serve_image route
+    thumbnails = [url_for('serve_image', folder=folder_name, filename=fn) for fn in saved_files]
 
-    # Render results page with thumbnails and download link
+    # Render results page with thumbnails
     return render_template('result.html', stage='show_results', folder_name=folder_name, thumbnails=thumbnails, filenames=saved_files)
 
 

@@ -44,24 +44,17 @@
       {% endwith %}
 
       {% if stage == 'choose_n' %}
-        <p class="note">Step 2: Enter an integer "Select every nth slice to extract"</p>
-        <form action="{{ url_for('process') }}" method="post">
-          <input type="hidden" name="uploaded_filename" value="{{ uploaded_filename }}">
-          <input type="number" name="n" min="1" placeholder="e.g., 5" required>
-          <button type="submit" class="btn btn-primary">Extract every nth slice</button>
-        </form>
-
-        <form action="{{ url_for('process') }}" method="post" style="margin-top:12px; text-align:center;">
+        <form action="{{ url_for('process') }}" method="post" style="text-align:center;">
           <input type="hidden" name="uploaded_filename" value="{{ uploaded_filename }}">
           <input type="hidden" name="action" value="show_all">
-          <button type="submit" class="btn btn-secondary">Show all slices (select individually)</button>
+          <button type="submit" class="btn btn-primary">Show all slices</button>
         </form>
 
         <p style="text-align:center; margin-top:12px;"><a href="{{ url_for('index') }}" class="btn btn-secondary">Upload different file</a></p>
 
       {% elif stage == 'show_results' %}
         <div class="controls-row">
-          <div class="note">Step 3: View extracted slices</div>
+          <div class="note">Click on slices to select them for download</div>
           <div class="big-actions">
             <a href="{{ url_for('download') }}?folder={{ folder_name }}" class="btn btn-primary btn-large">Download All Slices (zip)</a>
             <a style="margin-left:8px;" href="{{ url_for('index') }}" class="btn btn-secondary">Start Over</a>
