@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DICOM Slicer Tool</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width:900px; margin:24px auto; color:#222 }
+      header { text-align:center; margin-bottom:20px }
+      .card { background:#fff; border:1px solid #eee; padding:18px; border-radius:8px }
+      .steps { display:flex; gap:12px; justify-content:center; margin-bottom:12px }
+      .step { padding:8px 12px; background:#f6f6f6; border-radius:6px }
+      form { display:flex; flex-direction:column; gap:12px }
+      input[type=file] { padding:6px }
+      .actions { display:flex; gap:8px }
+      .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer }
+      .btn-primary { background:#007bff; color:#fff }
+      .note { font-size:0.9rem; color:#666 }
+      .flash { color: #b00020 }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>DICOM Slicer Tool</h1>
+      <p class="note">Step 1: Upload a single DICOM (.dcm) file</p>
+    </header>
+
+    <div class="card">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash">{{ messages[0] }}</div>
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('process') }}" method="post" enctype="multipart/form-data">
+        <label for="dicom_file">Choose DICOM file (.dcm)</label>
+        <input type="file" id="dicom_file" name="dicom_file" accept=".dcm" required>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Upload</button>
+        </div>
+      </form>
+
+      <hr>
+      <div class="steps">
+        <div class="step">Step 1: Upload DICOM</div>
+        <div class="step">Step 2: Choose nth slice</div>
+        <div class="step">Step 3: View & Download</div>
+      </div>
+    </div>
+  </body>
+</html>

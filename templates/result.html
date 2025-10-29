@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DICOM Slicer Results</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width:1100px; margin:24px auto; color:#222 }
+      header { text-align:center; margin-bottom:10px }
+      .card { background:#fff; border:1px solid #eee; padding:18px; border-radius:8px }
+      /* responsive grid */
+      .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:12px }
+      .thumb { border:1px solid #ddd; border-radius:8px; overflow:hidden; position:relative; cursor:pointer; background:#fafafa }
+      .thumb img { width:100%; height:150px; object-fit:cover; display:block }
+      .thumb .label { padding:8px; text-align:center; font-size:0.9rem }
+      .thumb.selected { outline:4px solid #007bff; box-shadow:0 6px 18px rgba(0,123,255,0.12); }
+      /* hide native checkbox visually but keep it in DOM for form submission */
+      .thumb input[type=checkbox] { position:absolute; left:-9999px; }
+
+      .controls-row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap }
+      .big-actions { display:flex; gap:8px; align-items:center }
+      .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer }
+      .btn-primary { background:#007bff; color:#fff; font-weight:600 }
+      .btn-secondary { background:#6c757d; color:#fff }
+      .btn-large { padding:12px 18px; font-size:1rem; border-radius:8px }
+      .note { font-size:0.95rem; color:#444 }
+      .flash { color: #b00020 }
+      .controls { display:flex; justify-content:space-between; align-items:center }
+      .selected-count { font-weight:600; color:#333 }
+      /* small overlay open icon */
+      .open-link { position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.5); color:#fff; padding:6px; border-radius:6px; font-size:0.85rem; text-decoration:none }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>DICOM Slicer Tool</h1>
+    </header>
+
+    <div class="card">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash">{{ messages[0] }}</div>
+        {% endif %}
+      {% endwith %}
+
+      {% if stage == 'choose_n' %}
+        <p class="note">Step 2: Enter an integer "Select every nth slice to extract"</p>
+        <form action="{{ url_for('process') }}" method="post">
+          <input type="hidden" name="uploaded_filename" value="{{ uploaded_filename }}">
+          <input type="number" name="n" min="1" placeholder="e.g., 5" required>
+          <button type="submit" class="btn btn-primary">Extract every nth slice</button>
+        </form>
+
+        <form action="{{ url_for('process') }}" method="post" style="margin-top:12px; text-align:center;">
+          <input type="hidden" name="uploaded_filename" value="{{ uploaded_filename }}">
+          <input type="hidden" name="action" value="show_all">
+          <button type="submit" class="btn btn-secondary">Show all slices (select individually)</button>
+        </form>
+
+        <p style="text-align:center; margin-top:12px;"><a href="{{ url_for('index') }}" class="btn btn-secondary">Upload different file</a></p>
+
+      {% elif stage == 'show_results' %}
+        <div class="controls-row">
+          <div class="note">Step 3: View extracted slices</div>
+          <div class="big-actions">
+            <a href="{{ url_for('download') }}?folder={{ folder_name }}" class="btn btn-primary btn-large">Download All Slices (zip)</a>
+            <a style="margin-left:8px;" href="{{ url_for('index') }}" class="btn btn-secondary">Start Over</a>
+          </div>
+        </div>
+        <hr>
+        <form id="download-selected-form" action="{{ url_for('download_selected') }}" method="post" style="margin:0">
+          <input type="hidden" name="folder" value="{{ folder_name }}">
+          <div style="text-align:right; margin-bottom:8px;">
+            <button id="download-selected" type="submit" class="btn btn-primary btn-large">Download Selected (<span id="count">0</span>)</button>
+          </div>
+
+          <div class="grid">
+            {% for fn in filenames %}
+              {% set thumb = thumbnails[loop.index0] %}
+              <div class="thumb" data-fn="{{ fn }}" tabindex="0">
+                <a class="open-link" href="{{ thumb }}" target="_blank" title="Open full image">Open</a>
+                <img class="thumb-img" src="{{ thumb }}" alt="slice {{ loop.index }}">
+                <div class="label">#{{ loop.index }}</div>
+                <input type="checkbox" name="selected" value="{{ fn }}">
+              </div>
+            {% endfor %}
+          </div>
+
+        </form>
+
+          <script>
+          (function(){
+            const thumbs = document.querySelectorAll('.thumb');
+            const countEl = document.getElementById('count');
+            const form = document.getElementById('download-selected-form');
+
+            function updateCount(){
+              const checked = document.querySelectorAll('.thumb input[type=checkbox]:checked').length;
+              countEl.textContent = checked;
+            }
+
+            thumbs.forEach(t => {
+              const cb = t.querySelector('input[type=checkbox]');
+              // ensure default is unchecked
+              cb.checked = false;
+              // toggle selection when clicking the thumb (but not the open-link)
+              t.addEventListener('click', (ev) => {
+                if(ev.target.closest('.open-link')){
+                  // allow opening full image when open-link clicked
+                  return;
+                }
+                // toggle
+                cb.checked = !cb.checked;
+                t.classList.toggle('selected', cb.checked);
+                updateCount();
+              });
+              // allow keyboard selection via Enter/Space
+              t.addEventListener('keydown', (ev) => {
+                if(ev.key === 'Enter' || ev.key === ' '){
+                  ev.preventDefault();
+                  cb.checked = !cb.checked;
+                  t.classList.toggle('selected', cb.checked);
+                  updateCount();
+                }
+              });
+            });
+
+            // on submit, ensure only selected checkboxes are submitted; unchecked ones are removed to avoid empty values
+            form.addEventListener('submit', (ev) => {
+              // nothing special required; only checked boxes will be included
+              const any = document.querySelectorAll('.thumb input[type=checkbox]:checked').length;
+              if(!any){
+                ev.preventDefault();
+                alert('Please select at least one slice to download.');
+              }
+            });
+
+            // initial count
+            updateCount();
+          })();
+        </script>
+      {% else %}
+        <p>Unknown stage.</p>
+      {% endif %}
+    </div>
+  </body>
+</html>
