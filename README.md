@@ -1,12 +1,11 @@
 # DICOM Slicer Tool
 
-Small web app to upload a single DICOM (.dcm) file, extract every nth slice as PNG images, view them, and download as a zip.
+Small web app to upload DICOM (.dcm) files, select slices and extract them as PNG images, and download as a zip.
 
 Features
-- Upload a single DICOM file (.dcm)
-- Choose "every nth slice" to extract
-- Converts selected slices to PNG and shows thumbnails
-- Download extracted slices as a zip
+- Supports uploading a single DICOM (.dcm) file
+- Converts all image slices to PNG format and displays thumbnails
+- Lets you select slices and download them as a ZIP archive
 - Simple, minimal UI using Jinja2 templates
 
 Requirements
