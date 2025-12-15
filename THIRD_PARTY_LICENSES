@@ -1,0 +1,49 @@
+This project, SliceSelect, uses the following third‑party libraries.
+Each library is distributed under its own license, as noted below.
+Please refer to the respective project pages for full license terms.
+
+1) Flask
+
+        Description: Web framework used to provide the HTTP API and web interface.
+
+        Project URL: https://palletsprojects.com/p/flask/
+
+        License: BSD‑3 (https://flask.palletsprojects.com/en/stable/license/)
+
+2) pydicom
+
+        Description: Library for reading, modifying, and writing DICOM files.
+
+        Project URL: https://pydicom.github.io/
+
+        License: MIT (https://github.com/pydicom/dicom-database/blob/master/LICENSE)
+
+3) Pillow
+
+        Description: Python Imaging Library (PIL) fork used for image processing and PNG export.
+
+        Project URL: https://python-pillow.org/
+
+        License: Open Source MIT-CMU (https://github.com/python-pillow/Pillow/blob/main/LICENSE)
+
+4) matplotlib
+
+        Description: Plotting library used for image handling/visualization where applicable.
+
+        Project URL: https://matplotlib.org/
+
+        License: PSF‑style, BSD‑compatible open‑source license (https://matplotlib.org/stable/project/license.html)
+
+5) NumPy
+
+        Description: Fundamental package for numerical computing in Python.
+
+        Project URL: https://numpy.org/
+
+        License: NumPy (BSD‑style) license (https://numpy.org/doc/stable/license.html).
+
+Note to users:
+
+The authors of SliceSelect are not the authors of the above third‑party components.
+All trademarks, service marks, and company names are the property of their respective owners.
+Use of these libraries in SliceSelect does not imply any endorsement by their authors.
