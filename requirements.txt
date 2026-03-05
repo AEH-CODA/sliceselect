@@ -1,0 +1,5 @@
+Flask>=2.0
+pydicom>=2.3
+Pillow>=9.0
+matplotlib>=3.0
+numpy>=1.19
